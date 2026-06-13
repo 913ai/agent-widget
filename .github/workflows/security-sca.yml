@@ -1,0 +1,67 @@
+name: Security - SCA (osv-scanner)
+
+# Software Composition Analysis with osv-scanner (the same OSV.dev data Datadog SCA uses).
+# This is FREE and version-controlled in the repo — defense-in-depth.
+#
+# NOTE ON THIS REPO:
+# agent-widget is currently a dependency-less, bundled vanilla-JS widget (just cdn.js) with NO
+# lockfiles or language manifests, so there is nothing to scan today. We still keep this workflow
+# as a tripwire: it runs `osv-scanner --recursive .`, which is a no-op now but will automatically
+# start scanning the moment a real lockfile (package-lock.json / yarn.lock / uv.lock / etc.) is
+# committed. The trigger therefore watches for ANY manifest/lockfile appearing.
+#
+# Posture: ADVISORY (writes a job summary, never blocks) via continue-on-error. Once dependencies
+# exist and the backlog is at zero, flip `continue-on-error` to false to make NEW criticals blocking.
+#
+# NOTE: org-level GitHub Actions must be enabled for this to run.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "**/package.json"
+      - "**/package-lock.json"
+      - "**/yarn.lock"
+      - "**/pnpm-lock.yaml"
+      - "**/uv.lock"
+      - "**/requirements*.txt"
+      - "**/pyproject.toml"
+  schedule:
+    - cron: "17 6 * * 1" # Mondays 06:17 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  osv-scan:
+    runs-on: ubuntu-latest
+    continue-on-error: true # ADVISORY for now — see header note
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install osv-scanner
+        run: |
+          curl -sSfL "https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64" -o /usr/local/bin/osv-scanner
+          chmod +x /usr/local/bin/osv-scanner
+          osv-scanner --version
+
+      - name: Scan repository (recursive — no-op until a lockfile is committed)
+        id: scan
+        run: |
+          set +e
+          osv-scanner --recursive --format markdown . > osv-report.md 2>/dev/null
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+          {
+            echo "## osv-scanner SCA report"
+            echo ""
+            cat osv-report.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: osv-sca-report
+          path: osv-report.md
+          retention-days: 30

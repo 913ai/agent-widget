@@ -1,0 +1,28 @@
+# Dependabot — automated dependency update PRs.
+#
+# WHY THIS IS HERE:
+# Dependabot raises version-update + security-update PRs automatically, which is what
+# stops a vulnerability backlog from ever building up again.
+#
+# NOTE ON THIS REPO:
+# agent-widget is a dependency-less, bundled vanilla-JS widget — there is NO package.json,
+# lockfile, or any other language manifest at any path. There is therefore NO "npm"/"uv"
+# ecosystem for Dependabot to update. The one thing that DOES have updatable dependencies is
+# the GitHub Actions workflows below (security-sca, secret-scan), so we keep Dependabot
+# scoped to "github-actions" only. If a real package manifest is added later, add the matching
+# ecosystem block (e.g. package-ecosystem: "npm", directory: "/").
+#
+# Target branch = main (the repo default branch).
+
+version: 2
+updates:
+  # ---------- GitHub Actions themselves ----------
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
+    labels: ["dependencies", "ci"]

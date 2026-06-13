@@ -1,0 +1,21 @@
+# Pre-commit hooks — the cheapest place to stop security problems: on the developer's machine,
+# before anything reaches git. Install once:  pipx install pre-commit && pre-commit install
+#
+# This is the PREVENTION layer. For agent-widget specifically, the gitleaks +
+# detect-private-key hooks matter most: cdn.js ships to customers' browsers, so a leaked key
+# must be stopped before the commit ever lands.
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks # blocks commits that contain secrets
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: ["--maxkb=2048"]
+      - id: check-merge-conflict
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
